@@ -1,5 +1,7 @@
-using ContractManagement.Models;
-using ContractManagement.Services;
+using ContactManagement.API.Application.Features.CustomFields.Commands.CreateCustomField;
+using ContactManagement.API.Application.Features.CustomFields.Commands.DeleteCustomField;
+using ContactManagement.API.Application.Features.CustomFields.Queries.GetAllCustomFields;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ContractManagement.Controllers;
@@ -8,11 +10,11 @@ namespace ContractManagement.Controllers;
 [Route("api/custom-fields")]
 public class CustomFieldsController : ControllerBase
 {
-    private readonly ICustomFieldService _customFieldService;
+    private readonly IMediator _mediator;
 
-    public CustomFieldsController(ICustomFieldService customFieldService)
+    public CustomFieldsController(IMediator mediator)
     {
-        _customFieldService = customFieldService;
+        _mediator = mediator;
     }
 
     /// <summary>
@@ -21,7 +23,8 @@ public class CustomFieldsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<CustomFieldDto>>> GetAll()
     {
-        var customFields = await _customFieldService.GetAllAsync();
+        var query = new GetAllCustomFieldsQuery();
+        var customFields = await _mediator.Send(query);
         return Ok(customFields);
     }
 
@@ -29,7 +32,7 @@ public class CustomFieldsController : ControllerBase
     /// Create a new custom field definition
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<CustomFieldDto>> Create([FromBody] CreateCustomFieldDto createDto)
+    public async Task<ActionResult<CreateCustomFieldResult>> Create([FromBody] CreateCustomFieldCommand command)
     {
         if (!ModelState.IsValid)
         {
@@ -38,8 +41,8 @@ public class CustomFieldsController : ControllerBase
 
         try
         {
-            var customField = await _customFieldService.CreateAsync(createDto);
-            return CreatedAtAction(nameof(GetAll), new { id = customField.Id }, customField);
+            var result = await _mediator.Send(command);
+            return CreatedAtAction(nameof(GetAll), new { id = result.Id }, result);
         }
         catch (Exception ex)
         {
@@ -53,8 +56,12 @@ public class CustomFieldsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var success = await _customFieldService.DeleteAsync(id);
-        if (!success) return NotFound();
+        var command = new DeleteCustomFieldCommand(id);
+        var success = await _mediator.Send(command);
+
+        if (!success)
+            return NotFound();
+
         return NoContent();
     }
 }

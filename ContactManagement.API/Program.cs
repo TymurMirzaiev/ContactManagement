@@ -1,5 +1,6 @@
-using ContractManagement.Data;
-using ContractManagement.Services;
+using ContactManagement.API.Application;
+using ContactManagement.API.Infrastructure;
+using ContactManagement.API.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,13 +10,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 
-// Configure Entity Framework Core with SQL Server
-builder.Services.AddDbContext<ContactManagementDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Register services
-builder.Services.AddScoped<IContactService, ContactService>();
-builder.Services.AddScoped<ICustomFieldService, CustomFieldService>();
+// Add layered architecture services
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
