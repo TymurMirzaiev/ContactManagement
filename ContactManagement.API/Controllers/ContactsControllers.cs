@@ -1,60 +1,152 @@
 using ContractManagement.Models;
+using ContractManagement.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ContractManagement.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("api/[controller]")]
 public class ContactsController : ControllerBase
 {
-    // Temporary in-memory store (replace with DB/EF later)
-    private static readonly List<ContactDto> _contacts = new List<ContactDto>();
+    private readonly IContactService _contactService;
 
-    [HttpGet]
-    public ActionResult<IEnumerable<ContactDto>> GetAll()
+    public ContactsController(IContactService contactService)
     {
-        return Ok(_contacts);
+        _contactService = contactService;
     }
 
-    [HttpGet("{id}")]
-    public ActionResult<ContactDto> GetById(Guid id)
+    /// <summary>
+    /// Get all contacts with pagination, sorting, and filtering
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<ContactDto>>> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? filterEmail = null)
     {
-        var contact = _contacts.FirstOrDefault(c => c.Id == id);
+        if (page < 1 || pageSize < 1 || pageSize > 100)
+        {
+            return BadRequest("Invalid pagination parameters");
+        }
+
+        var result = await _contactService.GetAllAsync(page, pageSize, sortBy, filterEmail);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get a contact by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ContactDto>> GetById(Guid id)
+    {
+        var contact = await _contactService.GetByIdAsync(id);
         if (contact == null) return NotFound();
         return Ok(contact);
     }
 
+    /// <summary>
+    /// Create a new contact
+    /// </summary>
     [HttpPost]
-    public ActionResult<ContactDto> Create(ContactDto contact)
+    public async Task<ActionResult<ContactDto>> Create([FromBody] CreateContactDto createDto)
     {
-        contact.Id = Guid.NewGuid();
-        contact.CreatedAt = DateTime.UtcNow;
-        contact.UpdatedAt = DateTime.UtcNow;
-        _contacts.Add(contact);
-        return CreatedAtAction(nameof(GetById), new { id = contact.Id }, contact);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var contact = await _contactService.CreateAsync(createDto);
+            return CreatedAtAction(nameof(GetById), new { id = contact.Id }, contact);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
+    /// <summary>
+    /// Update an existing contact
+    /// </summary>
     [HttpPut("{id}")]
-    public IActionResult Update(Guid id, ContactDto contact)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateContactDto updateDto)
     {
-        var dbContact = _contacts.FirstOrDefault(c => c.Id == id);
-        if (dbContact == null) return NotFound();
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
-        dbContact.Name = contact.Name;
-        dbContact.Email = contact.Email;
-        dbContact.Phone = contact.Phone;
-        dbContact.UpdatedAt = DateTime.UtcNow;
-        dbContact.CustomFields = contact.CustomFields;
+        try
+        {
+            var success = await _contactService.UpdateAsync(id, updateDto);
+            if (!success) return NotFound();
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Delete a contact
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var success = await _contactService.DeleteAsync(id);
+        if (!success) return NotFound();
         return NoContent();
     }
 
-    [HttpDelete("{id}")]
-    public IActionResult Delete(Guid id)
+    /// <summary>
+    /// Bulk merge contacts by email
+    /// Matches by email, updates existing, creates new, removes absent contacts
+    /// </summary>
+    [HttpPost("bulk-merge")]
+    public async Task<IActionResult> BulkMerge([FromBody] BulkMergeRequestDto request)
     {
-        var contact = _contacts.FirstOrDefault(c => c.Id == id);
-        if (contact == null) return NotFound();
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
 
-        _contacts.Remove(contact);
-        return NoContent();
+        try
+        {
+            await _contactService.BulkMergeAsync(request.Contacts);
+            return Ok(new { message = "Bulk merge completed successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Assign a custom field value to a contact
+    /// </summary>
+    [HttpPost("{id}/custom-fields/{fieldId}")]
+    public async Task<IActionResult> AssignCustomFieldValue(
+        Guid id,
+        Guid fieldId,
+        [FromBody] AssignCustomFieldValueDto valueDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var success = await _contactService.AssignCustomFieldValueAsync(id, fieldId, valueDto.Value);
+            if (!success) return NotFound("Contact or CustomField not found");
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }

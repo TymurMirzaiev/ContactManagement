@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(dotnet ef database:*)",
+      "Bash(dotnet build:*)"
+    ]
+  }
+}

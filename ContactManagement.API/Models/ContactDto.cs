@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace ContractManagement.Models;
 
 public class ContactDto
@@ -9,5 +11,6 @@ public class ContactDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    public Dictionary<string, object> CustomFields { get; set; } = new();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, object>? CustomFields { get; set; }
 }
