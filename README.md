@@ -39,18 +39,14 @@ This starts SQL Server 2022 in a Docker container on port 1433.
 - Username: `sa`
 - Password: `YourStrong@Passw0rd`
 
-### 2. Apply Database Migrations
+### 2. Run the API
 
 ```bash
 cd ContactManagement.API
-dotnet ef database update
-```
-
-### 3. Run the API
-
-```bash
 dotnet run
 ```
+
+**Note:** Database migrations are applied automatically on startup, so no manual migration step is needed.
 
 The API will be available at:
 - HTTPS: `https://localhost:7001`
@@ -199,7 +195,8 @@ Content-Type: application/json
 ```bash
 cd ContactManagement.API
 dotnet ef migrations add MigrationName
-dotnet ef database update
+# Migration will be applied automatically on next app startup
+# Or manually apply with: dotnet ef database update
 ```
 
 ### Remove Last Migration

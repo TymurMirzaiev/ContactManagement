@@ -7,8 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Database Setup:**
 ```bash
 docker-compose up -d                    # Start SQL Server
-cd ContactManagement.API
-dotnet ef database update               # Apply migrations
 ```
 
 **Development:**
@@ -17,13 +15,14 @@ cd ContactManagement.API
 dotnet restore                          # Restore packages
 dotnet build                            # Build project
 dotnet run                              # Run API (https://localhost:7001)
+                                        # Migrations apply automatically on startup
 ```
 
 **Migrations:**
 ```bash
 cd ContactManagement.API
-dotnet ef migrations add MigrationName  # Create new migration
-dotnet ef database update               # Apply migrations
+dotnet ef migrations add MigrationName  # Create new migration (auto-applied on next run)
+dotnet ef database update               # Manually apply migrations (optional)
 dotnet ef migrations remove             # Remove last migration
 ```
 
@@ -94,6 +93,8 @@ When adding new entities, configure them in `OnModelCreating()` to maintain cons
 ## Database
 
 **Connection String:** `appsettings.json` → `ConnectionStrings:DefaultConnection`
+
+**Auto-Migration:** Migrations are automatically applied on application startup via `dbContext.Database.Migrate()` in `Program.cs`. This ensures the database schema is always up-to-date.
 
 **Critical Indexes:**
 - `Contact.Email` - Unique index (prevents duplicate emails)
